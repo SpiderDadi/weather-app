@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三城天气查询</title>
+<style>
+  /* ===== 全局重置 & 基础 ===== */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+    transition: background 1.2s ease;
+    background: linear-gradient(145deg, #4facfe 0%, #00f2fe 100%);
+  }
+
+  /* ===== 容器 ===== */
+  .container {
+    max-width: 520px;
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  /* ===== 标题 ===== */
+  .app-title {
+    text-align: center;
+    color: #fff;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    margin-bottom: 18px;
+  }
+  .app-title small {
+    display: block;
+    font-size: 13px;
+    font-weight: 400;
+    opacity: 0.85;
+    margin-top: 4px;
+    letter-spacing: 1px;
+  }
+
+  /* ===== API Key 输入区 ===== */
+  .api-section {
+    background: rgba(255,255,255,0.20);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 14px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border: 1px solid rgba(255,255,255,0.25);
+  }
+  .api-section label {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .api-section input {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    background: rgba(255,255,255,0.85);
+    outline: none;
+    transition: box-shadow 0.2s;
+  }
+  .api-section input:focus {
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.6);
+  }
+  .api-section input::placeholder { color: #999; }
+  .api-section button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    background: #fff;
+    color: #333;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.2s;
+  }
+  .api-section button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  }
+  .api-hint {
+    text-align: center;
+    color: rgba(255,255,255,0.7);
+    font-size: 12px;
+    margin-top: -10px;
+    margin-bottom: 14px;
+  }
+  .api-hint a {
+    color: #fff;
+    text-decoration: underline;
+  }
+
+  /* ===== 城市标签 ===== */
+  .city-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  .city-tab {
+    flex: 1;
+    padding: 12px 0;
+    border: none;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.18);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: rgba(255,255,255,0.75);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+  }
+  .city-tab:hover {
+    background: rgba(255,255,255,0.30);
+    color: #fff;
+  }
+  .city-tab.active {
+    background: rgba(255,255,255,0.92);
+    color: #333;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    border-color: rgba(255,255,255,0.6);
+  }
+  .city-tab .city-sub {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    opacity: 0.7;
+    margin-top: 2px;
+  }
+
+  /* ===== 天气卡片 ===== */
+  .weather-card {
+    background: rgba(255,255,255,0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 24px;
+    padding: 30px 26px 26px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    border: 1px solid rgba(255,255,255,0.4);
+  }
+  .weather-card.loading {
+    opacity: 0.5;
+    transform: scale(0.97);
+  }
+
+  /* ===== 主天气区域 ===== */
+  .weather-main {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+  .weather-icon {
+    width: 100px;
+    height: 100px;
+    flex-shrink: 0;
+  }
+  .weather-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .weather-info {
+    flex: 1;
+  }
+  .weather-temp {
+    font-size: 52px;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1;
+    letter-spacing: -1px;
+  }
+  .weather-temp .deg {
+    font-size: 28px;
+    font-weight: 400;
+  }
+  .weather-desc {
+    font-size: 18px;
+    color: #555;
+    margin-top: 4px;
+  }
+  .weather-feels {
+    font-size: 13px;
+    color: #888;
+    margin-top: 2px;
+  }
+
+  /* ===== 详情网格 ===== */
+  .weather-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .detail-item {
+    background: rgba(0,0,0,0.04);
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .detail-icon {
+    font-size: 22px;
+    width: 32px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .detail-text {
+    flex: 1;
+  }
+  .detail-label {
+    font-size: 12px;
+    color: #999;
+    font-weight: 500;
+  }
+  .detail-value {
+    font-size: 16px;
+    color: #222;
+    font-weight: 600;
+    margin-top: 1px;
+  }
+
+  /* ===== 穿衣建议 ===== */
+  .clothing-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .clothing-icon {
+    font-size: 32px;
+    flex-shrink: 0;
+  }
+  .clothing-text {
+    flex: 1;
+    color: #fff;
+  }
+  .clothing-label {
+    font-size: 12px;
+    opacity: 0.8;
+    font-weight: 500;
+  }
+  .clothing-advice {
+    font-size: 15px;
+    font-weight: 500;
+    margin-top: 2px;
+    line-height: 1.5;
+  }
+  .clothing-temp-range {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-top: 3px;
+  }
+
+  /* ===== 底部更新时间 ===== */
+  .update-time {
+    text-align: center;
+    font-size: 12px;
+    color: #aaa;
+    margin-top: 4px;
+  }
+
+  /* ===== 加载动画 ===== */
+  .spinner {
+    display: none;
+    text-align: center;
+    padding: 40px 0;
+    color: #888;
+  }
+  .spinner.show { display: block; }
+  .spinner .dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #667eea;
+    margin: 0 4px;
+    animation: bounce 1.2s infinite ease-in-out;
+  }
+  .spinner .dot:nth-child(2) { animation-delay: 0.15s; }
+  .spinner .dot:nth-child(3) { animation-delay: 0.30s; }
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1.0); opacity: 1; }
+  }
+
+  /* ===== 错误提示 ===== */
+  .error-msg {
+    display: none;
+    background: rgba(255,80,80,0.12);
+    border: 1px solid rgba(255,80,80,0.25);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: #d63031;
+    font-size: 14px;
+    text-align: center;
+    margin-bottom: 14px;
+  }
+  .error-msg.show { display: block; }
+
+  /* ===== 响应式 ===== */
+  @media (max-width: 480px) {
+    body { padding: 12px; }
+    .app-title { font-size: 20px; }
+    .weather-card { padding: 20px 16px; border-radius: 18px; }
+    .weather-temp { font-size: 40px; }
+    .weather-icon { width: 72px; height: 72px; }
+    .weather-desc { font-size: 15px; }
+    .api-section { flex-wrap: wrap; }
+    .api-section label { width: 100%; }
+    .city-tab { font-size: 13px; padding: 10px 0; }
+    .city-tab .city-sub { font-size: 10px; }
+    .detail-item { padding: 10px 12px; }
+    .detail-value { font-size: 14px; }
+    .clothing-section { padding: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- 标题 -->
+  <div class="app-title">
+    🌤 三城天气
+    <small>青岛李沧 · 烟台芝罘 · 威海文登</small>
+  </div>
+
+  <!-- API Key 输入 -->
+  <div class="api-section">
+    <label for="apiKey">🔑 API Key</label>
+    <input type="text" id="apiKey" placeholder="输入你的 OpenWeatherMap API Key" />
+    <button id="saveKeyBtn">保存</button>
+  </div>
+  <div class="api-hint">
+    免费注册: <a href="https://openweathermap.org/api" target="_blank">openweathermap.org</a>
+    （注册后复制 API Key 粘贴到上方）
+  </div>
+
+  <!-- 错误提示 -->
+  <div class="error-msg" id="errorMsg"></div>
+
+  <!-- 城市标签 -->
+  <div class="city-tabs" id="cityTabs">
+    <button class="city-tab" data-city="qingdao">
+      青岛李沧
+      <span class="city-sub">Licang</span>
+    </button>
+    <button class="city-tab" data-city="yantai">
+      烟台芝罘
+      <span class="city-sub">Zhifu</span>
+    </button>
+    <button class="city-tab" data-city="weihai">
+      威海文登
+      <span class="city-sub">Wendeng</span>
+    </button>
+  </div>
+
+  <!-- 加载动画 -->
+  <div class="spinner" id="spinner">
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div style="margin-top:10px;font-size:13px;color:#aaa;">正在获取天气数据...</div>
+  </div>
+
+  <!-- 天气卡片 -->
+  <div class="weather-card" id="weatherCard" style="display:none;">
+    <!-- 主天气 -->
+    <div class="weather-main">
+      <div class="weather-icon" id="weatherIcon">
+        <img src="" alt="天气图标" />
+      </div>
+      <div class="weather-info">
+        <div class="weather-temp" id="tempDisplay">
+          --<span class="deg">°C</span>
+        </div>
+        <div class="weather-desc" id="descDisplay">--</div>
+        <div class="weather-feels" id="feelsDisplay">体感温度: --°C</div>
+      </div>
+    </div>
+
+    <!-- 详情 -->
+    <div class="weather-details">
+      <div class="detail-item">
+        <span class="detail-icon">💧</span>
+        <div class="detail-text">
+          <div class="detail-label">湿度</div>
+          <div class="detail-value" id="humidityDisplay">--</div>
+        </div>
+      </div>
+      <div class="detail-item">
+        <span class="detail-icon">🌬️</span>
+        <div class="detail-text">
+          <div class="detail-label">风力风向</div>
+          <div class="detail-value" id="windDisplay">--</div>
+        </div>
+      </div>
+      <div class="detail-item">
+        <span class="detail-icon">👁️</span>
+        <div class="detail-text">
+          <div class="detail-label">能见度</div>
+          <div class="detail-value" id="visDisplay">--</div>
+        </div>
+      </div>
+      <div class="detail-item">
+        <span class="detail-icon">📊</span>
+        <div class="detail-text">
+          <div class="detail-label">气压</div>
+          <div class="detail-value" id="pressureDisplay">--</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 穿衣建议 -->
+    <div class="clothing-section" id="clothingSection">
+      <span class="clothing-icon" id="clothingIcon">👕</span>
+      <div class="clothing-text">
+        <div class="clothing-label">👔 穿衣建议</div>
+        <div class="clothing-advice" id="clothingAdvice">--</div>
+        <div class="clothing-temp-range" id="clothingTempRange"></div>
+      </div>
+    </div>
+
+    <!-- 更新时间 -->
+    <div class="update-time" id="updateTime">数据更新于: --</div>
+  </div>
+</div>
+
+<script>
+// ===== 城市坐标配置 =====
+const CITIES = {
+  qingdao: { name: '青岛市李沧区', lat: 36.145, lon: 120.432 },
+  yantai:  { name: '烟台市芝罘区', lat: 37.540, lon: 121.391 },
+  weihai:  { name: '威海市文登区', lat: 37.196, lon: 122.058 },
+};
+
+// ===== 天气背景映射 =====
+const BG_MAP = {
+  'Clear':          'linear-gradient(145deg, #4facfe 0%, #00f2fe 100%)',
+  'Clouds':         'linear-gradient(145deg, #bdc3c7 0%, #89909a 100%)',
+  'Rain':           'linear-gradient(145deg, #4b6cb7 0%, #182848 100%)',
+  'Drizzle':        'linear-gradient(145deg, #5f7fa0 0%, #364f6b 100%)',
+  'Thunderstorm':   'linear-gradient(145deg, #373b44 0%, #1a1a2e 100%)',
+  'Snow':           'linear-gradient(145deg, #e6e9f0 0%, #c4cdde 100%)',
+  'Mist':           'linear-gradient(145deg, #a1a9b0 0%, #7a8288 100%)',
+  'Fog':            'linear-gradient(145deg, #a1a9b0 0%, #7a8288 100%)',
+  'Haze':           'linear-gradient(145deg, #c4a882 0%, #8b7355 100%)',
+  'default':        'linear-gradient(145deg, #4facfe 0%, #00f2fe 100%)',
+};
+
+// ===== 穿衣建议 =====
+function getClothingAdvice(temp) {
+  if (temp > 35) {
+    return { advice: '🥵 酷热！建议穿短袖短裤，出门务必防晒，多喝水防中暑', icon: '🩳', range: '> 35°C' };
+  } else if (temp > 30) {
+    return { advice: '☀️ 炎热，穿轻薄透气的短袖短裤，注意防晒', icon: '👕', range: '30~35°C' };
+  } else if (temp > 25) {
+    return { advice: '🌤 温暖舒适，短袖薄裤或连衣裙即可', icon: '👗', range: '25~30°C' };
+  } else if (temp > 20) {
+    return { advice: '🌥 微暖，薄长袖或短袖，早晚可加一件薄外套', icon: '🧥', range: '20~25°C' };
+  } else if (temp > 15) {
+    return { advice: '🌦 微凉，建议穿长袖 + 薄外套或卫衣', icon: '🧥', range: '15~20°C' };
+  } else if (temp > 10) {
+    return { advice: '🍂 较凉，毛衣 + 外套或夹克，注意保暖', icon: '🧶', range: '10~15°C' };
+  } else if (temp > 5) {
+    return { advice: '❄️ 寒冷，建议穿大衣或轻薄羽绒服', icon: '🧥', range: '5~10°C' };
+  } else if (temp > 0) {
+    return { advice: '🧣 严寒，羽绒服 + 围巾，注意保暖防寒', icon: '🧣', range: '0~5°C' };
+  } else {
+    return { advice: '⛄️ 极寒！厚羽绒服 + 帽子 + 围巾 + 手套，尽量减少外出', icon: '⛄', range: '< 0°C' };
+  }
+}
+
+// ===== 风向转换 =====
+function getWindDirection(deg) {
+  const dirs = ['北', '北东北', '东北', '东东北', '东', '东东南', '东南', '南东南',
+                '南', '南西南', '西南', '西西南', '西', '西西北', '西北', '北西北'];
+  const index = Math.round(deg / 22.5) % 16;
+  return dirs[index] + '风';
+}
+
+// ===== 风速转风级（蒲福风级） =====
+function getBeaufortScale(speed) {
+  if (speed < 0.3)  return 0;
+  if (speed < 1.6)  return 1;
+  if (speed < 3.4)  return 2;
+  if (speed < 5.5)  return 3;
+  if (speed < 8.0)  return 4;
+  if (speed < 10.8) return 5;
+  if (speed < 13.9) return 6;
+  if (speed < 17.2) return 7;
+  if (speed < 20.8) return 8;
+  if (speed < 24.5) return 9;
+  if (speed < 28.5) return 10;
+  if (speed < 32.7) return 11;
+  return 12;
+}
+
+// ===== 能见度格式化 =====
+function formatVisibility(meters) {
+  if (meters >= 1000) {
+    return (meters / 1000).toFixed(1) + ' km';
+  }
+  return meters + ' m';
+}
+
+// ===== 天气图标 emoji（备用） =====
+function getWeatherEmoji(icon) {
+  const map = {
+    '01d': '☀️', '01n': '🌙',
+    '02d': '⛅', '02n': '☁️',
+    '03d': '☁️', '03n': '☁️',
+    '04d': '☁️', '04n': '☁️',
+    '09d': '🌧️', '09n': '🌧️',
+    '10d': '🌦️', '10n': '🌧️',
+    '11d': '⛈️', '11n': '⛈️',
+    '13d': '🌨️', '13n': '🌨️',
+    '50d': '🌫️', '50n': '🌫️',
+  };
+  return map[icon] || '🌤️';
+}
+
+// ===== DOM 引用 =====
+const $ = id => document.getElementById(id);
+const apiKeyInput       = $('apiKey');
+const saveKeyBtn        = $('saveKeyBtn');
+const cityTabs          = $('cityTabs');
+const weatherCard       = $('weatherCard');
+const spinner           = $('spinner');
+const errorMsg          = $('errorMsg');
+const weatherIcon       = $('weatherIcon');
+const tempDisplay       = $('tempDisplay');
+const descDisplay       = $('descDisplay');
+const feelsDisplay      = $('feelsDisplay');
+const humidityDisplay   = $('humidityDisplay');
+const windDisplay       = $('windDisplay');
+const visDisplay        = $('visDisplay');
+const pressureDisplay   = $('pressureDisplay');
+const clothingSection   = $('clothingSection');
+const clothingIcon      = $('clothingIcon');
+const clothingAdvice    = $('clothingAdvice');
+const clothingTempRange = $('clothingTempRange');
+const updateTime        = $('updateTime');
+
+// ===== 状态 =====
+let currentCity = 'qingdao';
+let apiKey = localStorage.getItem('openweathermap_key') || '';
+
+// ===== 初始化 API Key =====
+if (apiKey) apiKeyInput.value = apiKey;
+
+saveKeyBtn.addEventListener('click', () => {
+  const key = apiKeyInput.value.trim();
+  if (key) {
+    apiKey = key;
+    localStorage.setItem('openweathermap_key', key);
+    showError('');
+    // 重新加载当前城市
+    fetchWeather(currentCity);
+  } else {
+    showError('请输入有效的 API Key');
+  }
+});
+apiKeyInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') saveKeyBtn.click();
+});
+
+// ===== 城市切换 =====
+cityTabs.addEventListener('click', (e) => {
+  const tab = e.target.closest('.city-tab');
+  if (!tab) return;
+  const city = tab.dataset.city;
+  if (city === currentCity) return;
+  currentCity = city;
+  document.querySelectorAll('.city-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  fetchWeather(city);
+});
+
+// ===== 显示错误 =====
+function showError(msg) {
+  if (msg) {
+    errorMsg.textContent = msg;
+    errorMsg.classList.add('show');
+  } else {
+    errorMsg.classList.remove('show');
+  }
+}
+
+// ===== 设置天气背景 =====
+function setWeatherBackground(condition) {
+  const bg = BG_MAP[condition] || BG_MAP.default;
+  document.body.style.background = bg;
+}
+
+// ===== 获取天气数据 =====
+async function fetchWeather(cityKey) {
+  const city = CITIES[cityKey];
+  if (!city) return;
+
+  if (!apiKey) {
+    showError('请先输入 OpenWeatherMap API Key 并点击保存');
+    return;
+  }
+
+  showError('');
+  weatherCard.style.display = 'none';
+  spinner.classList.add('show');
+
+  const url = `https://api.openweathermap.org/data/2.5/weather?lat=${city.lat}&lon=${city.lon}&appid=${apiKey}&units=metric&lang=zh_cn`;
+
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      if (resp.status === 401) {
+        throw new Error('API Key 无效，请检查是否正确输入');
+      } else if (resp.status === 429) {
+        throw new Error('请求过于频繁，请稍后再试');
+      } else {
+        throw new Error(`网络请求失败 (${resp.status})，请检查网络或 API Key`);
+      }
+    }
+
+    const data = await resp.json();
+    updateWeatherUI(data, cityKey);
+  } catch (err) {
+    showError('❌ ' + err.message);
+    weatherCard.style.display = 'none';
+  } finally {
+    spinner.classList.remove('show');
+  }
+}
+
+// ===== 更新 UI =====
+function updateWeatherUI(data, cityKey) {
+  const city = CITIES[cityKey];
+  const main = data.main;
+  const wind = data.wind;
+  const weather = data.weather[0];
+  const sys = data.sys;
+  const visibility = data.visibility;
+
+  // 温度
+  const temp = Math.round(main.temp);
+  tempDisplay.innerHTML = temp + '<span class="deg">°C</span>';
+
+  // 天气描述
+  descDisplay.textContent = weather.description;
+
+  // 体感温度
+  const feels = Math.round(main.feels_like);
+  feelsDisplay.textContent = `体感温度: ${feels}°C`;
+
+  // 湿度
+  humidityDisplay.textContent = main.humidity + '%';
+
+  // 风向风力
+  const windDir = wind.deg !== undefined ? getWindDirection(wind.deg) : '';
+  const windSpeed = Math.round(wind.speed * 10) / 10;
+  const beaufort = getBeaufortScale(wind.speed);
+  windDisplay.textContent = `${windDir} ${beaufort}级 (${windSpeed} m/s)`;
+
+  // 能见度
+  visDisplay.textContent = formatVisibility(visibility);
+
+  // 气压
+  pressureDisplay.textContent = main.pressure + ' hPa';
+
+  // 天气图标
+  const iconCode = weather.icon;
+  const iconUrl = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
+  weatherIcon.querySelector('img').src = iconUrl;
+  weatherIcon.querySelector('img').alt = weather.description;
+
+  // 天气背景
+  setWeatherBackground(weather.main);
+
+  // 穿衣建议
+  const advice = getClothingAdvice(temp);
+  clothingIcon.textContent = advice.icon;
+  clothingAdvice.textContent = advice.advice;
+  clothingTempRange.textContent = `当前温度 ${temp}°C (${advice.range})`;
+
+  // 更新时间
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const timeStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  updateTime.textContent = `数据更新于: ${timeStr}`;
+
+  // 显示卡片
+  weatherCard.style.display = 'block';
+}
+
+// ===== 自动加载默认城市 =====
+document.addEventListener('DOMContentLoaded', () => {
+  // 默认选中第一个城市
+  document.querySelector('.city-tab').classList.add('active');
+  if (apiKey) {
+    fetchWeather('qingdao');
+  }
+});
+</script>
+
+</body>
+</html>
