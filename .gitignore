@@ -10,5 +10,17 @@ Thumbs.db
 .vscode/
 *.sublime-*
 
+# 忽略 Claude Code 本地配置
+.claude/
+
+# 忽略生成文件
+Official-Document-Drafting-Agent/生成/
+
+# 忽略 Playwright 浏览器（本地安装，不提交）
+ms-playwright/
+
+# 忽略 NotebookLM 认证文件
+.notebooklm/
+
 # 忽略日志
 *.log
